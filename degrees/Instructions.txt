@@ -1,0 +1,4 @@
+In order to run the code, you only need to have python3 installed and be in the same directory as the datasets.
+Please run the code with python3 degrees.py. 
+
+The link to the youtube's explanation on the results is: https://youtu.be/qP1IKqxtcUI

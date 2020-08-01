@@ -1,0 +1,6 @@
+To run the code:
+1)Download the files minesweeper.py and runner.py
+2)Open the location of the files in your terminal
+3)Install the requirements with pip install -r requirements.txt
+4)Run the game with python3 runner.py
+5)For the youtube solution video please visit: https://youtu.be/CtAioOnwCrs

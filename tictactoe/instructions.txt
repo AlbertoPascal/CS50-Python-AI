@@ -1,0 +1,6 @@
+1) Download the project
+2) Install the requirements with pip install -r requirements.txt
+3) run the runner.py code with python3 runner.py
+4) Enjoy playing Tic Tac Toe!
+
+youtube video link: https://youtu.be/1clKjNr11eA
