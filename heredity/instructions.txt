@@ -1,0 +1,4 @@
+instructions:
+1) Download the code
+2) Open a terminal and run python3 heredity.py data/family0.csv
+3) For solution video please visit: https://youtu.be/n-BCArcqcEE

@@ -1,0 +1,4 @@
+Instructions:
+1) Download the code
+2) Open a terminal and run python3 pagerank.py corpus0
+3) for the explanation video please visit: https://youtu.be/ON27iIyGjUY
