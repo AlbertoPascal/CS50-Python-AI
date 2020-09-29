@@ -36,6 +36,8 @@ flag = pygame.image.load("assets/images/flag.png")
 flag = pygame.transform.scale(flag, (cell_size, cell_size))
 mine = pygame.image.load("assets/images/mine.png")
 mine = pygame.transform.scale(mine, (cell_size, cell_size))
+redmine = pygame.image.load("assets/images/redmine.png")
+redmine = pygame.transform.scale(redmine, (cell_size, cell_size))
 
 # Create game and AI agent
 game = Minesweeper(height=HEIGHT, width=WIDTH, mines=MINES)
@@ -45,7 +47,7 @@ ai = MinesweeperAI(height=HEIGHT, width=WIDTH)
 revealed = set()
 flags = set()
 lost = False
-
+last_move = None
 # Show instructions initially
 instructions = True
 
@@ -115,7 +117,11 @@ while True:
 
             # Add a mine, flag, or number if needed
             if game.is_mine((i, j)) and lost:
-                screen.blit(mine, rect)
+                #print("Last move was ", last_move)
+                if last_move == (i,j):
+                    screen.blit(redmine,rect)
+                else:
+                    screen.blit(mine, rect)
             elif (i, j) in flags:
                 screen.blit(flag, rect)
             elif (i, j) in revealed:
@@ -212,6 +218,7 @@ while True:
 
     # Make move and update AI knowledge
     if move:
+        last_move = move
         if game.is_mine(move):
             lost = True
         else:
