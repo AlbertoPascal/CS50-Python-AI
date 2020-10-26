@@ -154,17 +154,28 @@ class CrosswordCreator():
         return False if one or more domains end up empty.
         """
         if arcs is None:
+            #We should begin with an initial list of arcs to make consistent. 
             arcs = set()
+            #To create the domain, we iterate through each var
             for var in self.crossword.variables:
+                #We iterate through every neighbor of the variable. 
                 for neighbor in self.crossword.neighbors(var):
                     arcs.add((var, neighbor))
 
         for x, y in arcs:
             if self.revise(x, y):
+                #means they are consistent, so I need to go throught the neighbors and add what's left. 
                 for neighbor in self.crossword.neighbors(x):
                     arcs.add((x, neighbor))
-
-        return len(self.domains[x]) > 0
+            else:
+                #Nothing to do here because the answers might not be available.
+                pass
+        
+        return_result = False
+        
+        if len(self.domains[x]) >0:
+            return_result = True
+        return return_result
 
     def assignment_complete(self, assignment):
         """
