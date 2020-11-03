@@ -1,7 +1,7 @@
 import sys
 
 from crossword import *
-
+import itertools
 
 class CrosswordCreator():
 
@@ -99,11 +99,14 @@ class CrosswordCreator():
         (Remove any values that are inconsistent with a variable's unary
          constraints; in this case, the length of the word.)
         """
+        #We first need to iterate through every variable that exists. 
         for var in self.crossword.variables:
             #Now that we access the variables, we need to iterate through the words
             for word in self.crossword.words:
-                #Now we check the lengths that differ:
+                #We need to check that the word's number of letters is the same of that of the variable
+                #Since variables is an object from Variables class, we can use its .length property. 
                 if not len(word) == var.length:
+                    #We remove the word from that variable's domain. 
                     self.domains[var].remove(word)
 
     def revise(self, x, y):
@@ -116,33 +119,42 @@ class CrosswordCreator():
         """
         made_revision= False
         word_coordinates = self.crossword.overlaps[x, y]
-        print("Starting arc-consisten revision. Initial domains are: ")
-        print("Domain X: ", self.domains[x])
-        print("Domain Y: ", self.domains[y])
-        print("Overlap value: ", word_coordinates)
+        #print("Starting arc-consisten revision. Initial domains are: ")
+        #print("X content: ", x)
+        #print("Y content: ", y)
+        #print("Domain X: ", self.domains[x])
+        #print("Domain Y: ", self.domains[y])
+        #print("Overlap value: ", word_coordinates)
         unusable_words = set()
         
         if bool(word_coordinates):
             #If there are intersections between the two words: 
             for word1 in self.domains[x]:
                 #For each word of domain X I'll compare with coord in domain Y to see which word overlaps. 
-                print("word1 value", word1)
+                #print("word1 value", word1)
                 can_use = False
                 #For each word of domain Y, We will see if the overlap is true. 
                 for word2 in self.domains[y]:
-                    print("word2 value", word2)
+                    #print("word2 value", word2)
                     #Whenever an overlap is possible, we mark it as a "valid word" on domain1
                     if word1 != word2 and word1[word_coordinates[0]] == word2[word_coordinates[1]]:
                         can_use = True
-                        print("I can use the combo of ", word1, " and ", word2)
+                        #print("I can use the combo of ", word1, " and ", word2)
                         break
+                    else:
+                        #print("These words cannot be used: ", word1, ", ", word2)
+                        continue
                 #If no overlap was possible with word1, we need to eventually remove word1 from domain x. 
                 if not can_use:
-                    print("marking word as unsuable ")
+                    print("marking word as unsuable ", word1)
                     unusable_words.add(word1)
+                    #we also update our flag because we will need to make some changes. 
                     made_revision = True
+        #Here we update our set to remove the unsuable words. 
+        
+        
         self.domains[x].difference_update(unusable_words)
-       
+        print("returning that I made a revision: ", made_revision)
         return made_revision
 
     def ac3(self, arcs=None):
@@ -154,70 +166,127 @@ class CrosswordCreator():
         return False if one or more domains end up empty.
         """
         if arcs is None:
+            queue = list(itertools.product(self.crossword.variables, self.crossword.variables))
+            queue = [arc for arc in queue if arc[0] != arc[1] and self.crossword.overlaps[arc[0], arc[1]] is not None]
+        else:
+            queue = arcs
+            
+        print("queue is: ", len(queue))
+        print("-------------------------------")
+        print(queue)
+        if arcs is None:
             #We should begin with an initial list of arcs to make consistent. 
             arcs = set()
-            #To create the domain, we iterate through each var
-            for var in self.crossword.variables:
-                #We iterate through every neighbor of the variable. 
-                for neighbor in self.crossword.neighbors(var):
-                    arcs.add((var, neighbor))
-
-        for x, y in arcs:
-            if self.revise(x, y):
-                #means they are consistent, so I need to go throught the neighbors and add what's left. 
-                for neighbor in self.crossword.neighbors(x):
-                    arcs.add((x, neighbor))
+            #To create the domain, we iterate through each permutation of variables
+            for var1, var2 in itertools.permutations(self.crossword.variables,2):
+                    #Since we only want those that overlap
+                    if self.crossword.overlaps[var1, var2]:
+                        arcs.add((var1, var2))
+        empty_domains = False
+        arc_list = list(arcs)
+        print("arcs is: ", len(arcs))
+        print("-------------------------------")
+        print(arcs)
+        print("-------------------------------")
+        print(arcs==queue)
+       # print("starting with arcs: ", arcs)
+        for item in arc_list:
+            if item in queue:
+                print("OK")
             else:
-                #Nothing to do here because the answers might not be available.
-                pass
-        
-        return_result = False
-        
-        if len(self.domains[x]) >0:
-            return_result = True
-        return return_result
+                print(item, " is missing in queue")
+        while arc_list:
+            arc = arc_list.pop(0)
+            x, y = arc[0], arc[1]
+
+            # Make variable x arc consistent with variable y
+            if self.revise(x, y):
+                
+                # If domain is empty, problem is unsolvable
+                if not self.domains[x]:
+                    print("ending ac3")
+                    return False
+                
+                # Append arc to queue after making change to domain (to ensure other arcs stay consistent)
+                for z in (self.crossword.neighbors(x) - {y}):
+                    queue.append((z, x))
+        return True
+#        for x, y in arcs:
+#            if self.revise(x, y):
+#                
+#                # If domain is empty, problem is unsolvable
+#                if not self.domains[x]:
+#                    print("ending ac3")
+#                    return False
+#                
+#                # Append arc to queue after making change to domain (to ensure other arcs stay consistent)
+#                for z in (self.crossword.neighbors(x) - {y}):
+#                    arcs.add((z, x))
+#            
+        return True
 
     def assignment_complete(self, assignment):
         """
         Return True if `assignment` is complete (i.e., assigns a value to each
         crossword variable); return False otherwise.
         """
+
+        missing_assignment = False
         for variable in self.crossword.variables:
+            
             if variable not in assignment.keys():
-                return False
-            if assignment[variable] not in self.crossword.words:
-                return False
-        
-        return True
+                missing_assignment = True
+                break
+            if assignment[variable] == None:
+                missing_assignment = True
+                break
+            
+        return not(missing_assignment)
+#        missing_assignment = False
+#        for variable in self.crossword.variables:
+#            print("My variable: ", variable)
+#            if variable is None:
+#                missing_assignment = True
+#            if variable not in assignment.keys():
+#                missing_assignment = True
+#            elif assignment[variable] == None:
+#                #Means I have a word mapped to None. 
+#                missing_assignment = True
+#                    
+#        return not(missing_assignment)
 
     def consistent(self, assignment):
         """
         Return True if `assignment` is consistent (i.e., words fit in crossword
         puzzle without conflicting characters); return False otherwise.
         """
-
-        for variable1 in assignment:
+        #print("Starting to check for consistent: ", assignment)
+        
+        for variable1, variable2 in itertools.permutations(assignment, 2):
+            #We will iterate through the different combinations of variable1, variable2. 
             word1 = assignment[variable1]
-            if variable1.length != len(word1):
-                # word length doesn't satisfy constraints
+            word2 = assignment[variable2]
+            #print("Word1: ", word1, " Word2: ", word2)
+            if word1 == None or word2 == None:
+                #Then my solution is still in progress. Can't validate for this. 
+                continue
+            #Starting the checks:
+            if word1 == word2:
+                #words were mapped to a same variable. 
+                #print(word1, " was equal to ", word2, " so returning false")
                 return False
-
-            for variable2 in assignment:
-                word2 = assignment[variable2]
-                if variable1 != variable2:
-                    if word1 == word2:
-                        # two variables mapped to the same word
-                        return False
-
-                    overlap = self.crossword.overlaps[variable1, variable2]
-                    if overlap is not None:
-                        a, b = overlap
-                        if word1[a] != word2[b]:
-                            # words don't satisfy overlap constraints
-                            return False
-
+            if variable1.length != len(word1) or variable2.length != len(word2):
+                #means one of my words is longer or shorter than needed. 
+                #print("Variable lengths: ", variable1.length, " and ", variable2.length, " whereas words: ", len(word1), " and ", len(word2))
+                return False
+            #Finally, we need to check whether the variables overlap or not. 
+            overlap_point = self.crossword.overlaps[variable1,variable2]
+            #print("Overlap point was : ", overlap_point)
+            if bool(overlap_point):
+                #We have an overlap so we check that the characters are ok. 
+                if word1[overlap_point[0]] != word2[overlap_point[1]]:
+                    return False
         return True
-            
 
     def order_domain_values(self, var, assignment):
         """
