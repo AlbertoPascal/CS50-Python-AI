@@ -119,12 +119,7 @@ class CrosswordCreator():
         """
         made_revision= False
         word_coordinates = self.crossword.overlaps[x, y]
-        #print("Starting arc-consisten revision. Initial domains are: ")
-        #print("X content: ", x)
-        #print("Y content: ", y)
-        #print("Domain X: ", self.domains[x])
-        #print("Domain Y: ", self.domains[y])
-        #print("Overlap value: ", word_coordinates)
+      
         unusable_words = set()
         
         if bool(word_coordinates):
@@ -146,7 +141,6 @@ class CrosswordCreator():
                         continue
                 #If no overlap was possible with word1, we need to eventually remove word1 from domain x. 
                 if not can_use:
-                    print("marking word as unsuable ", word1)
                     unusable_words.add(word1)
                     #we also update our flag because we will need to make some changes. 
                     made_revision = True
@@ -154,7 +148,6 @@ class CrosswordCreator():
         
         
         self.domains[x].difference_update(unusable_words)
-        print("returning that I made a revision: ", made_revision)
         return made_revision
 
     def ac3(self, arcs=None):
@@ -217,13 +210,11 @@ class CrosswordCreator():
         Return True if `assignment` is consistent (i.e., words fit in crossword
         puzzle without conflicting characters); return False otherwise.
         """
-        #print("Starting to check for consistent: ", assignment)
         
         for variable1, variable2 in itertools.permutations(assignment, 2):
             #We will iterate through the different combinations of variable1, variable2. 
             word1 = assignment[variable1]
             word2 = assignment[variable2]
-            #print("Word1: ", word1, " Word2: ", word2)
             if word1 == None or word2 == None:
                 #Then my solution is still in progress. Can't validate for this. 
                 continue
