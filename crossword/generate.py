@@ -165,15 +165,7 @@ class CrosswordCreator():
         Return True if arc consistency is enforced and no domains are empty;
         return False if one or more domains end up empty.
         """
-        if arcs is None:
-            queue = list(itertools.product(self.crossword.variables, self.crossword.variables))
-            queue = [arc for arc in queue if arc[0] != arc[1] and self.crossword.overlaps[arc[0], arc[1]] is not None]
-        else:
-            queue = arcs
-            
-        print("queue is: ", len(queue))
-        print("-------------------------------")
-        print(queue)
+       
         if arcs is None:
             #We should begin with an initial list of arcs to make consistent. 
             arcs = set()
@@ -182,58 +174,35 @@ class CrosswordCreator():
                     #Since we only want those that overlap
                     if self.crossword.overlaps[var1, var2]:
                         arcs.add((var1, var2))
-        empty_domains = False
+        #We create a list of our arcs. This is done to prevent iteration problems when adding to the set.                 
         arc_list = list(arcs)
-        print("arcs is: ", len(arcs))
-        print("-------------------------------")
-        print(arcs)
-        print("-------------------------------")
-        print(arcs==queue)
-       # print("starting with arcs: ", arcs)
-        for item in arc_list:
-            if item in queue:
-                print("OK")
-            else:
-                print(item, " is missing in queue")
-        while arc_list:
-            arc = arc_list.pop(0)
-            x, y = arc[0], arc[1]
-
-            # Make variable x arc consistent with variable y
+        #By default, we are not expecting to have any empty domains.
+        empty_domains = False
+        for x,y in arc_list:
             if self.revise(x, y):
-                
-                # If domain is empty, problem is unsolvable
-                if not self.domains[x]:
-                    print("ending ac3")
-                    return False
-                
+                if len(self.domains[x])<=0 or len(self.domains[y])<=0:
+                    #my arc variable's domain is empty so we cannot have any arc consistency
+                    empty_domains = True
+                    break
                 # Append arc to queue after making change to domain (to ensure other arcs stay consistent)
-                for z in (self.crossword.neighbors(x) - {y}):
-                    queue.append((z, x))
-        return True
-#        for x, y in arcs:
-#            if self.revise(x, y):
-#                
-#                # If domain is empty, problem is unsolvable
-#                if not self.domains[x]:
-#                    print("ending ac3")
-#                    return False
-#                
-#                # Append arc to queue after making change to domain (to ensure other arcs stay consistent)
-#                for z in (self.crossword.neighbors(x) - {y}):
-#                    arcs.add((z, x))
-#            
-        return True
+                for neighbor in self.crossword.neighbors(x):
+                    arc_list.append((x, neighbor))
+        return not(empty_domains)
 
     def assignment_complete(self, assignment):
         """
         Return True if `assignment` is complete (i.e., assigns a value to each
         crossword variable); return False otherwise.
         """
-
+        #We are not expecting to have any missing assignments
         missing_assignment = False
+        #We iterate through each variable
         for variable in self.crossword.variables:
-            
+            #if my variable were to be non-existent, we are missing something
+            if variable is None:
+                missing_assignment = True
+                break
+            #if my variable is not mapped in the assignment keys, we are missing something
             if variable not in assignment.keys():
                 missing_assignment = True
                 break
@@ -242,18 +211,6 @@ class CrosswordCreator():
                 break
             
         return not(missing_assignment)
-#        missing_assignment = False
-#        for variable in self.crossword.variables:
-#            print("My variable: ", variable)
-#            if variable is None:
-#                missing_assignment = True
-#            if variable not in assignment.keys():
-#                missing_assignment = True
-#            elif assignment[variable] == None:
-#                #Means I have a word mapped to None. 
-#                missing_assignment = True
-#                    
-#        return not(missing_assignment)
 
     def consistent(self, assignment):
         """
