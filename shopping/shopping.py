@@ -86,6 +86,7 @@ def load_data(filename):
             else:
                 labels.append(1)
        # print(evidence[:2])
+    #print(evidence[0])
     return (evidence,labels)
 
 
@@ -94,7 +95,10 @@ def train_model(evidence, labels):
     Given a list of evidence lists and a list of labels, return a
     fitted k-nearest neighbor model (k=1) trained on the data.
     """
-    raise NotImplementedError
+    neighbor = KNeighborsClassifier(n_neighbors = 1)
+    neighbor.fit(evidence,labels)
+    
+    return neighbor
 
 
 def evaluate(labels, predictions):
@@ -112,7 +116,27 @@ def evaluate(labels, predictions):
     representing the "true negative rate": the proportion of
     actual negative labels that were accurately identified.
     """
-    raise NotImplementedError
+    positive_labels = 0
+    negative_labels = 0
+    total_positive_labels = 0
+    total_negative_labels= 0
+    for label, prediction in zip(labels, predictions):
+        #print("My label is: ", label)
+        #print("My prediction is: ", prediction)
+        if label == 1:
+            total_positive_labels = total_positive_labels +1
+            if label ==prediction:
+                positive_labels = positive_labels +1
+        elif label == 0:
+            total_negative_labels = total_negative_labels +1
+            if label == prediction:
+                negative_labels = negative_labels +1
+    
+    sensitivity = positive_labels/total_positive_labels
+    specificity = negative_labels/total_negative_labels
+            
+            
+    return (sensitivity, specificity)
 
 
 if __name__ == "__main__":
