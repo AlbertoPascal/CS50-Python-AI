@@ -2,6 +2,7 @@ import sys
 
 from crossword import *
 import itertools
+import copy
 
 class CrosswordCreator():
 
@@ -243,7 +244,42 @@ class CrosswordCreator():
         The first value in the list, for example, should be the one
         that rules out the fewest values among the neighbors of `var`.
         """
-        return self.domains[var]
+        
+        words = self.domains[var]
+        
+        #I will first iterate through every possible word in my current domain
+        #The idea is to see "what would happen" to other domains if I pick each word
+        possible_options = {word:0 for word in words}
+        
+        for word in words:
+        #For each of these words, I need to check the nuber of available neighbors
+            for neighbor in self.crossword.neighbors(var):
+                if neighbor in assignment.keys():
+                    #means I already assigned this neighbor so I should skip. 
+                    continue
+                #Now I check if this is a useful neighbor
+                overlap_point = self.crossword.overlaps[var, neighbor]
+                
+                if overlap_point is not None:
+                    #Means it has a useful word in there too so I look for them:
+                    #I extract the overlapping points:
+                    letter1, letter2 = overlap_point
+                    #print("I had an overlap: ", letter1, " and ", letter2)
+                    for second_word in self.domains[neighbor]:
+                        #I go through the neighbors words and eliminate the words that conflict with current chosen word
+                        if second_word[letter2] != word[letter1]:
+                            #I should remove this value from the neighboring domain.
+                            #This means I should only add 1 to the count of words discarded in this option. 
+                            possible_options[word] = possible_options[word] + 1
+                        else:
+                            #Otherwise, we can continue searching
+                            pass
+        #Once I get to this point, I should have mapped all of the "eliminating" values I can when choosing each scenario
+        #we sort the words by eliminating values: 
+        possible_options =  dict(sorted(possible_options.items(), key=lambda x: -   x[1]))
+        #Now that we have the list ordered, we only want to keep the keys:
+        ordered_domain = possible_options.keys()
+        return ordered_domain
 
     def select_unassigned_variable(self, assignment):
         """
@@ -253,9 +289,24 @@ class CrosswordCreator():
         degree. If there is a tie, any of the tied variables are acceptable
         return values.
         """
+        remaining_variables = {}
+        #We need to store the remaining variables with their length of available words
         for variable in self.crossword.variables:
-            if variable not in assignment.keys():
-                return variable
+            if variable in assignment.keys():
+                continue
+            else:
+                #It means it is a variable I have still not assigned so I could possibly return it. 
+                #Therefore, I store a tuple of length of remaining values and number of neighbors (remaining_values, degrees)
+                remaining_variables[variable] = (len(self.domains[variable]), len(self.crossword.neighbors(variable)))
+        
+        #Now that we know the remaining variables, we need to classify them according to their complexity
+        #We want to sort so that the ones with less remainings are first, but also have the highest degree. 
+        #(Therefore, its like remaining values asc, degrees desc)
+        remaining_variables = sorted(remaining_variables.items(), key = lambda x:(x[1][0],-x[1][1]))
+        #Now that they are ordered, I should have my lowest remaining domains in 
+        #I should always be able to return my first value available since it should be both, lowest remainign and highest degree in its category
+        return remaining_variables[0][0]
+
 
     def backtrack(self, assignment):
         """
@@ -266,19 +317,40 @@ class CrosswordCreator():
         """
         if self.assignment_complete(assignment):
             return assignment
-        
-        variable = self.select_unassigned_variable(assignment)
+        else:
+            #if it was not complete, we first get an unassigned variable to start trying
+            current_variable = self.select_unassigned_variable(assignment)
+            #Then, we need to iterate through every word in that domain
+            domain = self.order_domain_values(current_variable, assignment)
+            for word in domain:
+                #We assign the current variable
+                new_assignment = copy.deepcopy(assignment)
+                new_assignment[current_variable] = word
+                #Then we need to check for arc consistency
+                #we prepare the new arc set
+                new_arcs = set()
+                
+                #We store the combination of variables in the assingment that overlap
+                for var1, var2 in itertools.permutations(new_assignment.keys(),2):
+                    #Since we only want those that overlap
+                    if self.crossword.overlaps[var1, var2]:
+                        new_arcs.add((var1, var2))
+                
+                #Then we check for ac3 consistency and assignment consistency
+                if self.ac3(new_arcs) and self.consistent(new_assignment):
+                    #if all arcs are consistent, we can continue assigning    
+                    
+                    next_assignment = self.backtrack(new_assignment)
+                    if next_assignment is None:
+                        #Means we cannot complete the assignment so we erase our bad attempt
+                        new_assignment[current_variable] = None
+                        pass
+                    else:
+                        #means our assignment was successful so we can keep it.
+                        return next_assignment
+                
+            return None
 
-        for value in self.order_domain_values(variable, assignment):
-            assignment[variable] = value
-            if self.consistent(assignment):
-                result = self.backtrack(assignment)
-                if result is None:
-                    assignment[variable] = None
-                else:
-                    return result
-
-        return None
 
 def main():
 
